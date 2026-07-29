@@ -3,7 +3,6 @@ services:
     name: wanpl
     runtime: node
     plan: free
-    # NODE_ENV=production だと npm が devDependencies を落とすので、ビルド時は明示的に入れる
-    buildCommand: npm ci --include=dev && npm run build
+    buildCommand: npm ci && npm run build
     startCommand: NODE_ENV=production npm start
     healthCheckPath: /
