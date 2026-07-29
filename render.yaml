@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: wanpl
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: NODE_ENV=production npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
