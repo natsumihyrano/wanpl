@@ -35,9 +35,10 @@ NODE_ENV=production PORT=8787 npm start
 2. [Render](https://render.com) で **New → Web Service**（または Blueprint で `render.yaml`）
 3. 設定例:
    - **Runtime**: Node
-   - **Build**: `npm ci && npm run build`
+   - **Build**: `npm ci --include=dev && npm run build`
    - **Start**: `NODE_ENV=production npm start`
    - **Health Check Path**: `/`
+   - サービス環境変数に `NODE_ENV=production` を**付けない**（付けるとビルドで vite/tsc が入らない）
 4. デプロイ後の URL でローカル・CPU・オンラインが動きます（本番の WS は `wss://そのドメイン/ws`）
 
 無料プランはスリープすることがあります（アクセスがしばらく無いと落ち、初回が遅い）。
