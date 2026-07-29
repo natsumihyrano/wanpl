@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   createGame,
   isLegal,
@@ -11,6 +11,7 @@ import {
   type PublicDogView,
 } from '../engine'
 import { chooseCpuAction } from '../ai/simple'
+import { playSfxForTransition } from '../audio/sfx'
 import { DogCard } from './DogCard'
 import { PlayerBoard } from './PlayerBoard'
 import { CommandPicker } from './CommandPicker'
@@ -36,6 +37,7 @@ export function GameTable({ mode, onExit, onGameEnd }: Props) {
   const [lastAction, setLastAction] = useState<string | null>(null)
   const [autoEndNote, setAutoEndNote] = useState(false)
   const [walkingDogId, setWalkingDogId] = useState<string | null>(null)
+  const prevStateRef = useRef<GameState | null>(null)
 
   const viewer: PlayerId = mode === 'cpu' ? 0 : state.activePlayer
   const hideHands = mode === 'local' && passReady
@@ -47,6 +49,16 @@ export function GameTable({ mode, onExit, onGameEnd }: Props) {
       }),
     [state, viewer, hideHands, mode],
   )
+
+  useEffect(() => {
+    playSfxForTransition(
+      prevStateRef.current,
+      state,
+      lastAction ?? undefined,
+      mode === 'cpu' ? { you: 0 } : undefined,
+    )
+    prevStateRef.current = state
+  }, [state, lastAction, mode])
 
   const myHand = pub.players[viewer].hand ?? []
   const pendingHerding =

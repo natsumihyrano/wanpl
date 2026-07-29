@@ -8,12 +8,14 @@ import {
   type PlayerId,
   type PublicDogView,
 } from '../engine'
+import { playSfxForTransition, unlockAudio } from '../audio/sfx'
 import { DogCard } from './DogCard'
 import { PlayerBoard } from './PlayerBoard'
 import { CommandPicker } from './CommandPicker'
 import { DogPeek } from './DogPeek'
 import { ActiveEffectBar } from './ActiveEffectBar'
 import { CombatFxBanner } from './CombatFxBanner'
+import { ServerWakeScreen } from './ServerWakeScreen'
 import { getTurnHint, type SelectMode } from './turnGuide'
 import type { CommandId } from '../data/battle'
 
@@ -38,57 +40,146 @@ function wsUrl() {
   return `${proto}://${location.host}/ws`
 }
 
+/** Render スリープ解除用に HTTP で起こしてから WS 接続する */
+async function pokeServer(): Promise<void> {
+  if (import.meta.env.DEV) return
+  try {
+    await fetch(`${location.origin}/`, {
+      method: 'GET',
+      cache: 'no-store',
+      credentials: 'omit',
+    })
+  } catch {
+    /* コールドスタート中は失敗しがち。WS リトライに任せる */
+  }
+}
+
 export function OnlineGame({ mode, onExit }: Props) {
   const [codeInput, setCodeInput] = useState('')
   const [roomCode, setRoomCode] = useState<string | null>(null)
   const [playerId, setPlayerId] = useState<PlayerId | null>(null)
   const [state, setState] = useState<GameState | null>(null)
-  const [status, setStatus] = useState('接続中…')
+  const [status, setStatus] = useState('サーバー起動中…')
   const [error, setError] = useState<string | null>(null)
   const [select, setSelect] = useState<SelectMode>({ kind: 'none' })
   const [walkingDogId, setWalkingDogId] = useState<string | null>(null)
+  const [waking, setWaking] = useState(true)
+  const [connected, setConnected] = useState(false)
+  const [fatalDisconnect, setFatalDisconnect] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
+  const prevStateRef = useRef<GameState | null>(null)
+  const cancelledRef = useRef(false)
+  const sessionRef = useRef({ hasRoom: false })
 
   const send = useCallback((payload: object) => {
     wsRef.current?.send(JSON.stringify(payload))
   }, [])
 
   useEffect(() => {
-    const ws = new WebSocket(wsUrl())
-    wsRef.current = ws
-    ws.onopen = () => {
-      setStatus('接続しました')
-      if (mode === 'create') {
-        send({ type: 'create' })
+    cancelledRef.current = false
+    sessionRef.current.hasRoom = false
+    unlockAudio()
+    let retryTimer: number | undefined
+    let attempt = 0
+
+    function attach(ws: WebSocket) {
+      wsRef.current = ws
+      ws.onopen = () => {
+        if (cancelledRef.current) {
+          ws.close()
+          return
+        }
+        setWaking(false)
+        setConnected(true)
+        setError(null)
+        setStatus('接続しました')
+        if (mode === 'create') {
+          send({ type: 'create' })
+        }
+      }
+      ws.onmessage = (ev) => {
+        const msg = JSON.parse(ev.data as string) as NetMsg
+        if (msg.type === 'room_created') {
+          sessionRef.current.hasRoom = true
+          setRoomCode(msg.code)
+          setPlayerId(msg.playerId)
+          setStatus('相手の入室待ち…')
+        } else if (msg.type === 'joined') {
+          sessionRef.current.hasRoom = true
+          setRoomCode(msg.code)
+          setPlayerId(msg.playerId)
+          setStatus('入室しました')
+        } else if (msg.type === 'waiting') {
+          setStatus('相手の入室待ち…')
+        } else if (msg.type === 'state') {
+          sessionRef.current.hasRoom = true
+          setState(msg.state)
+          setStatus('対戦中')
+          setSelect({ kind: 'none' })
+        } else if (msg.type === 'error') {
+          setError(msg.message)
+        } else if (msg.type === 'opponent_left') {
+          setError('相手が退出しました')
+          setStatus('終了')
+        }
+      }
+      ws.onerror = () => {
+        /* onclose でリトライ */
+      }
+      ws.onclose = () => {
+        if (cancelledRef.current) return
+        setConnected(false)
+        if (sessionRef.current.hasRoom) {
+          setStatus('切断')
+          setError('接続が切れました。タイトルからやり直してください')
+          setWaking(false)
+          setFatalDisconnect(true)
+          return
+        }
+        setWaking(true)
+        setStatus('サーバー起動中…')
+        attempt += 1
+        const wait = Math.min(8000, 900 + attempt * 700)
+        retryTimer = window.setTimeout(() => {
+          void connect()
+        }, wait)
       }
     }
-    ws.onmessage = (ev) => {
-      const msg = JSON.parse(ev.data as string) as NetMsg
-      if (msg.type === 'room_created') {
-        setRoomCode(msg.code)
-        setPlayerId(msg.playerId)
-        setStatus('相手の入室待ち…')
-      } else if (msg.type === 'joined') {
-        setRoomCode(msg.code)
-        setPlayerId(msg.playerId)
-        setStatus('入室しました')
-      } else if (msg.type === 'waiting') {
-        setStatus('相手の入室待ち…')
-      } else if (msg.type === 'state') {
-        setState(msg.state)
-        setStatus('対戦中')
-        setSelect({ kind: 'none' })
-      } else if (msg.type === 'error') {
-        setError(msg.message)
-      } else if (msg.type === 'opponent_left') {
-        setError('相手が退出しました')
-        setStatus('終了')
+
+    async function connect() {
+      if (cancelledRef.current) return
+      setWaking(true)
+      await pokeServer()
+      if (cancelledRef.current) return
+      try {
+        const ws = new WebSocket(wsUrl())
+        attach(ws)
+      } catch {
+        attempt += 1
+        const wait = Math.min(8000, 900 + attempt * 700)
+        retryTimer = window.setTimeout(() => {
+          void connect()
+        }, wait)
       }
     }
-    ws.onerror = () => setError('接続に失敗しました')
-    ws.onclose = () => setStatus('切断')
-    return () => ws.close()
+
+    void connect()
+
+    return () => {
+      cancelledRef.current = true
+      if (retryTimer) window.clearTimeout(retryTimer)
+      wsRef.current?.close()
+      wsRef.current = null
+    }
   }, [mode, send])
+
+  useEffect(() => {
+    if (!state) return
+    playSfxForTransition(prevStateRef.current, state, undefined, {
+      you: playerId ?? undefined,
+    })
+    prevStateRef.current = state
+  }, [state, playerId])
 
   function join() {
     const code = codeInput.trim().toUpperCase()
@@ -134,7 +225,24 @@ export function OnlineGame({ mode, onExit }: Props) {
     return toPublicState(state, playerId, { revealHand: playerId })
   }, [state, playerId])
 
-  if (mode === 'join' && playerId === null && !error) {
+  if (!fatalDisconnect && (waking || !connected)) {
+    return <ServerWakeScreen onCancel={onExit} />
+  }
+
+  if (fatalDisconnect) {
+    return (
+      <div className="lobby">
+        <h1>オンライン対戦</h1>
+        <p className="lobby-status">{status}</p>
+        {error && <p className="error">{error}</p>}
+        <button type="button" className="btn btn--ghost" onClick={onExit}>
+          戻る
+        </button>
+      </div>
+    )
+  }
+
+  if (mode === 'join' && playerId === null) {
     return (
       <div className="lobby">
         <h1>部屋に入る</h1>

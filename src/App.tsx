@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { unlockAudio } from './audio/sfx'
 import { TitleScreen } from './ui/TitleScreen'
 import { HelpModal } from './ui/HelpModal'
 import { GameTable } from './ui/GameTable'
@@ -16,6 +17,16 @@ type Screen =
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'title' })
   const [help, setHelp] = useState(false)
+
+  useEffect(() => {
+    const unlock = () => unlockAudio()
+    window.addEventListener('pointerdown', unlock, { once: true })
+    window.addEventListener('keydown', unlock, { once: true })
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [])
 
   return (
     <>

@@ -1,4 +1,11 @@
+import { useState } from 'react'
 import { getDogSprite } from '../data/dogSprites'
+import {
+  isSfxMuted,
+  playSfx,
+  toggleSfxMuted,
+  unlockAudio,
+} from '../audio/sfx'
 
 interface Props {
   onLocal: () => void
@@ -54,11 +61,34 @@ export function TitleScreen({
   onCatalog,
   onHelp,
 }: Props) {
+  const [muted, setMuted] = useState(isSfxMuted)
+
+  function tap(fn: () => void) {
+    unlockAudio()
+    playSfx('ui')
+    fn()
+  }
+
   return (
     <div className="title-screen">
       <div className="title-sky" aria-hidden />
       <div className="title-grass" aria-hidden />
       <TitleParkDogs />
+
+      <button
+        type="button"
+        className="sfx-toggle"
+        aria-pressed={muted}
+        aria-label={muted ? '効果音オフ' : '効果音オン'}
+        onClick={() => {
+          unlockAudio()
+          const next = toggleSfxMuted()
+          setMuted(next)
+          if (!next) playSfx('ui')
+        }}
+      >
+        {muted ? '音オフ' : '音オン'}
+      </button>
 
       <main className="title-hero">
         <h1 className="title-brand">Wanpl</h1>
@@ -66,24 +96,32 @@ export function TitleScreen({
         <p className="title-tag">犬種の特技で、公園のなかよし勝負</p>
 
         <div className="title-actions">
-          <button type="button" className="btn btn--primary btn--lg" onClick={onLocal}>
+          <button type="button" className="btn btn--primary btn--lg" onClick={() => tap(onLocal)}>
             ローカル対戦
           </button>
-          <button type="button" className="btn btn--secondary btn--lg" onClick={onCpu}>
+          <button type="button" className="btn btn--secondary btn--lg" onClick={() => tap(onCpu)}>
             CPU対戦
           </button>
-          <button type="button" className="btn btn--secondary btn--lg" onClick={onOnlineCreate}>
+          <button
+            type="button"
+            className="btn btn--secondary btn--lg"
+            onClick={() => tap(onOnlineCreate)}
+          >
             オンライン（部屋を作る）
           </button>
-          <button type="button" className="btn btn--ghost btn--lg" onClick={onOnlineJoin}>
+          <button type="button" className="btn btn--ghost btn--lg" onClick={() => tap(onOnlineJoin)}>
             オンライン（部屋に入る）
           </button>
-          <button type="button" className="btn btn--secondary btn--lg btn--span" onClick={onCatalog}>
+          <button
+            type="button"
+            className="btn btn--secondary btn--lg btn--span"
+            onClick={() => tap(onCatalog)}
+          >
             犬図鑑
           </button>
         </div>
 
-        <button type="button" className="help-link" onClick={onHelp}>
+        <button type="button" className="help-link" onClick={() => tap(onHelp)}>
           あそびかた
         </button>
       </main>
