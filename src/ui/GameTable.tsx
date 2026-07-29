@@ -27,9 +27,11 @@ interface Props {
   mode: PlayMode
   onExit: () => void
   onGameEnd?: (winner: PlayerId) => void
+  onHelp?: () => void
+  onCatalog?: () => void
 }
 
-export function GameTable({ mode, onExit, onGameEnd }: Props) {
+export function GameTable({ mode, onExit, onGameEnd, onHelp, onCatalog }: Props) {
   const [state, setState] = useState<GameState>(() => createGame())
   const [passReady, setPassReady] = useState(mode === 'local')
   const [select, setSelect] = useState<SelectMode>({ kind: 'none' })
@@ -305,12 +307,11 @@ export function GameTable({ mode, onExit, onGameEnd }: Props) {
       className={`game-table ${flash ? `flash-${flash.toLowerCase()}` : ''} ${pickingCommand ? 'is-picking-command' : ''} ${peekDog ? 'has-peek' : ''}`}
     >
       <header className="table-top">
-        <button type="button" className="btn btn--ghost" onClick={onExit}>
+        <button type="button" className="btn btn--ghost btn--table" onClick={onExit}>
           やめる
         </button>
         <div className="table-top__center">
           <span className="brand-mini">Wanpl</span>
-          <span className="goal-pill">ゴール：相手のおやつを0に</span>
           <span className="turn-pill">
             ターン {state.turn} ·{' '}
             {state.activePlayer === viewer
@@ -319,10 +320,22 @@ export function GameTable({ mode, onExit, onGameEnd }: Props) {
                 ? 'CPUの番'
                 : `P${state.activePlayer + 1}の番`}
           </span>
+          <div className="table-top__links">
+            {onCatalog && (
+              <button type="button" className="table-link" onClick={onCatalog}>
+                犬図鑑
+              </button>
+            )}
+            {onHelp && (
+              <button type="button" className="table-link" onClick={onHelp}>
+                あそびかた
+              </button>
+            )}
+          </div>
         </div>
         <button
           type="button"
-          className="btn btn--primary"
+          className="btn btn--primary btn--table"
           disabled={
             !myTurn ||
             !inMain ||

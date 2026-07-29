@@ -20,11 +20,13 @@ const ROLE_LABELS: Record<DogRole, string> = {
 
 interface Props {
   onBack: () => void
+  /** 対戦中に開くとき、対戦を残したまま前面に出す */
+  overlay?: boolean
 }
 
 type Filter = 'all' | ElementId
 
-export function DogCatalog({ onBack }: Props) {
+export function DogCatalog({ onBack, overlay = false }: Props) {
   const [filter, setFilter] = useState<Filter>('all')
 
   const dogs = useMemo(() => {
@@ -34,9 +36,9 @@ export function DogCatalog({ onBack }: Props) {
   }, [filter])
 
   return (
-    <div className="dog-catalog">
+    <div className={`dog-catalog${overlay ? ' dog-catalog--overlay' : ''}`}>
       <header className="dog-catalog__top">
-        <button type="button" className="btn btn--ghost" onClick={onBack}>
+        <button type="button" className="btn btn--ghost btn--table" onClick={onBack}>
           戻る
         </button>
         <div className="dog-catalog__heading">

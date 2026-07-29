@@ -30,6 +30,8 @@ type NetMsg =
 interface Props {
   mode: 'create' | 'join'
   onExit: () => void
+  onHelp?: () => void
+  onCatalog?: () => void
 }
 
 function wsUrl() {
@@ -54,7 +56,7 @@ async function pokeServer(): Promise<void> {
   }
 }
 
-export function OnlineGame({ mode, onExit }: Props) {
+export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
   const [codeInput, setCodeInput] = useState('')
   const [roomCode, setRoomCode] = useState<string | null>(null)
   const [playerId, setPlayerId] = useState<PlayerId | null>(null)
@@ -355,19 +357,30 @@ export function OnlineGame({ mode, onExit }: Props) {
   return (
     <div className={`game-table ${pickingCommand ? 'is-picking-command' : ''} ${peekDog ? 'has-peek' : ''}`}>
       <header className="table-top">
-        <button type="button" className="btn btn--ghost" onClick={onExit}>
+        <button type="button" className="btn btn--ghost btn--table" onClick={onExit}>
           やめる
         </button>
         <div className="table-top__center">
           <span className="brand-mini">Wanpl</span>
-          <span className="goal-pill">ゴール：相手のおやつを0に</span>
           <span className="turn-pill">
             部屋 {roomCode} · {myTurn ? 'あなたの番' : '相手の番'}
           </span>
+          <div className="table-top__links">
+            {onCatalog && (
+              <button type="button" className="table-link" onClick={onCatalog}>
+                犬図鑑
+              </button>
+            )}
+            {onHelp && (
+              <button type="button" className="table-link" onClick={onHelp}>
+                あそびかた
+              </button>
+            )}
+          </div>
         </div>
         <button
           type="button"
-          className="btn btn--primary"
+          className="btn btn--primary btn--table"
           disabled={!myTurn || !inMain || !!state.pendingHerding || pickingCommand}
           onClick={() => dispatch({ type: 'END_TURN' })}
         >

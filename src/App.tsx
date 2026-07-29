@@ -17,6 +17,7 @@ type Screen =
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'title' })
   const [help, setHelp] = useState(false)
+  const [catalogOverlay, setCatalogOverlay] = useState(false)
 
   useEffect(() => {
     const unlock = () => unlockAudio()
@@ -28,6 +29,9 @@ export default function App() {
     }
   }, [])
 
+  const openHelp = () => setHelp(true)
+  const openCatalog = () => setCatalogOverlay(true)
+
   return (
     <>
       {screen.name === 'title' && (
@@ -37,23 +41,46 @@ export default function App() {
           onOnlineCreate={() => setScreen({ name: 'online-create' })}
           onOnlineJoin={() => setScreen({ name: 'online-join' })}
           onCatalog={() => setScreen({ name: 'catalog' })}
-          onHelp={() => setHelp(true)}
+          onHelp={openHelp}
         />
       )}
       {screen.name === 'local' && (
-        <GameTable mode="local" onExit={() => setScreen({ name: 'title' })} />
+        <GameTable
+          mode="local"
+          onExit={() => setScreen({ name: 'title' })}
+          onHelp={openHelp}
+          onCatalog={openCatalog}
+        />
       )}
       {screen.name === 'cpu' && (
-        <GameTable mode="cpu" onExit={() => setScreen({ name: 'title' })} />
+        <GameTable
+          mode="cpu"
+          onExit={() => setScreen({ name: 'title' })}
+          onHelp={openHelp}
+          onCatalog={openCatalog}
+        />
       )}
       {screen.name === 'online-create' && (
-        <OnlineGame mode="create" onExit={() => setScreen({ name: 'title' })} />
+        <OnlineGame
+          mode="create"
+          onExit={() => setScreen({ name: 'title' })}
+          onHelp={openHelp}
+          onCatalog={openCatalog}
+        />
       )}
       {screen.name === 'online-join' && (
-        <OnlineGame mode="join" onExit={() => setScreen({ name: 'title' })} />
+        <OnlineGame
+          mode="join"
+          onExit={() => setScreen({ name: 'title' })}
+          onHelp={openHelp}
+          onCatalog={openCatalog}
+        />
       )}
       {screen.name === 'catalog' && (
         <DogCatalog onBack={() => setScreen({ name: 'title' })} />
+      )}
+      {catalogOverlay && (
+        <DogCatalog overlay onBack={() => setCatalogOverlay(false)} />
       )}
       {help && <HelpModal onClose={() => setHelp(false)} />}
     </>
