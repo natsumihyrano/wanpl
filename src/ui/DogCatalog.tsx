@@ -1,5 +1,5 @@
 import { useMemo, useState, type CSSProperties } from 'react'
-import { DOGS, type DogDef } from '../data/dogs'
+import { DOGS, type DogDef, type DogRole } from '../data/dogs'
 import {
   COMMAND_MAP,
   ELEMENT_MAP,
@@ -7,6 +7,16 @@ import {
   type ElementId,
 } from '../data/battle'
 import { getDogSprite } from '../data/dogSprites'
+
+const ROLE_LABELS: Record<DogRole, string> = {
+  assassin: 'アタッカー',
+  bruiser: 'ファイター',
+  tank: 'タンク',
+  lane: 'レーン',
+  support: 'サポート',
+  tempo: 'テンポ',
+  value: 'バリュー',
+}
 
 interface Props {
   onBack: () => void
@@ -72,6 +82,7 @@ export function DogCatalog({ onBack }: Props) {
 function DogCatalogCard({ dog }: { dog: DogDef }) {
   const sprite = getDogSprite(dog.id, 'front')
   const el = ELEMENT_MAP[dog.element]
+  const roleLabel = ROLE_LABELS[dog.role]
 
   return (
     <article
@@ -93,6 +104,7 @@ function DogCatalogCard({ dog }: { dog: DogDef }) {
         <header className="dex-card__head">
           <h2>{dog.name}</h2>
           <span className="dex-card__el">{el.name}</span>
+          <span className="dex-card__role">{roleLabel}</span>
           <span className="dex-card__cost" title="元気コスト">
             元気 {dog.cost}
           </span>

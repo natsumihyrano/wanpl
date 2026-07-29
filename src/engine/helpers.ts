@@ -31,6 +31,17 @@ export function nextRng(seed: number): { value: number; seed: number } {
   return { value, seed: t >>> 0 }
 }
 
+/**
+ * 守りに届かないときのクリティカル率（deficit = D − P ≥ 1）。
+ * 1差 22% / 2差 12% / それ以上 6%
+ */
+export function critChance(deficit: number): number {
+  if (deficit <= 0) return 0
+  if (deficit === 1) return 0.22
+  if (deficit === 2) return 0.12
+  return 0.06
+}
+
 export function shuffle<T>(arr: T[], seed: number): { arr: T[]; seed: number } {
   const out = [...arr]
   let s = seed
@@ -96,9 +107,26 @@ export function spendCommandUse(dog: FieldDog, command: CommandId): boolean {
   return true
 }
 
-export function effectiveDefense(dog: FieldDog, howlActive: boolean): number {
+export function effectiveDefense(
+  dog: FieldDog,
+  howlActive: boolean,
+  opts?: { foeHowlOwner?: PlayerId | null; ownerId?: PlayerId },
+): number {
   const def = getDef(dog.cardId)
-  return Math.max(0, def.defense - (howlActive ? 1 : 0))
+  let d = def.defense
+  if (def.ability === 'silent') {
+    return Math.max(0, d)
+  }
+  if (howlActive) {
+    d -= 1
+  } else if (
+    opts?.foeHowlOwner != null &&
+    opts.ownerId != null &&
+    opts.ownerId === opponentOf(opts.foeHowlOwner)
+  ) {
+    d -= 1
+  }
+  return Math.max(0, d)
 }
 
 export function effectivePower(
@@ -111,12 +139,17 @@ export function effectivePower(
     if (ally.instanceId === dog.instanceId) continue
     if (getDef(ally.cardId).ability === 'cheer') bonus += 1
   }
-  if (def.ability === 'sprint') bonus += 1
+  if (def.ability === 'sprint' || def.ability === 'gale') bonus += 1
+  if (def.ability === 'aloof' && owner.field.length === 1) bonus += 1
   return def.power + bonus
 }
 
 export function hasGuard(player: PlayerState): boolean {
   return player.field.some((d) => getDef(d.cardId).ability === 'guard')
+}
+
+export function hasSpots(player: PlayerState): boolean {
+  return player.field.some((d) => getDef(d.cardId).ability === 'spots')
 }
 
 export function cloneState(state: GameState): GameState {
@@ -181,10 +214,12 @@ export function createGame(seed = Date.now() >>> 0): GameState {
     turn: 1,
     phase: 'main',
     howlActive: false,
+    foeHowlOwner: null,
     winner: null,
     log: ['Wanpl 開始！山札を配って公園勝負'],
     pendingHerding: null,
     rngSeed: s,
+    fx: null,
   }
 
   // 後攻補正: 初期元気の土台 + 手札+1

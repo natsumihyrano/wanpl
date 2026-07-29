@@ -1,5 +1,6 @@
 import type { PublicDogView, PublicPlayerView } from '../engine'
 import { STARTING_TREATS } from '../engine'
+import { typeModifier, type ElementId } from '../data/battle'
 import { DogCard } from './DogCard'
 
 interface Props {
@@ -14,6 +15,8 @@ interface Props {
   emptyLaneHint?: string
   selectableDogs?: boolean
   herdingMode?: boolean
+  /** チャレンジ時: 攻撃側の属性。相手犬レーンを有利/不利で色分け */
+  matchupFrom?: ElementId | null
   onLaneClick?: (lane: number) => void
   onDogClick?: (dog: PublicDogView) => void
   animKey?: string
@@ -31,6 +34,7 @@ export function PlayerBoard({
   emptyLaneHint = '直接チャレンジ',
   selectableDogs,
   herdingMode,
+  matchupFrom = null,
   onLaneClick,
   onDogClick,
   animKey,
@@ -39,6 +43,14 @@ export function PlayerBoard({
   const byLane = [0, 1, 2].map(
     (lane) => player.field.find((d) => d.lane === lane) ?? null,
   )
+
+  function matchupClass(dog: PublicDogView | null): string {
+    if (!highlightLanes || !matchupFrom || !dog) return ''
+    const mod = typeModifier(matchupFrom, dog.element)
+    if (mod > 0) return 'lane--match-adv'
+    if (mod < 0) return 'lane--match-dis'
+    return 'lane--match-even'
+  }
 
   return (
     <section
@@ -83,6 +95,7 @@ export function PlayerBoard({
               highlightLanes ? 'lane--targetable' : '',
               selectedLane === lane ? 'lane--selected' : '',
               !dog && highlightLanes ? 'lane--empty-face' : '',
+              matchupClass(dog),
             ]
               .filter(Boolean)
               .join(' ')}

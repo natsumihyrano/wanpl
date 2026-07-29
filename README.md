@@ -25,13 +25,19 @@ npm run build
 NODE_ENV=production PORT=8787 npm start
 ```
 
-同一ポートで静的ファイルと WebSocket（`/ws`）を配信します。
+同一ポートで静的ファイル（`dist`）と WebSocket（`/ws`）を配信します。
 
 ## デプロイ（Render）
 
-1. GitHub にリポジトリを作成して push
-2. [Render](https://render.com) で **New → Blueprint**、または Web Service を作成
-3. Build: `npm ci && npm run build` / Start: `NODE_ENV=production npm start`
-4. 公開 URL でローカル・CPU・オンラインが動きます
+スターサーバーなどの共有レンタルでは WebSocket 常駐ができないため、オンライン込みは Render 向きです。
 
-`render.yaml` を置いてあるので Blueprint でも可です。
+1. このリポジトリを GitHub に push
+2. [Render](https://render.com) で **New → Web Service**（または Blueprint で `render.yaml`）
+3. 設定例:
+   - **Runtime**: Node
+   - **Build**: `npm ci && npm run build`
+   - **Start**: `NODE_ENV=production npm start`
+   - **Health Check Path**: `/`
+4. デプロイ後の URL でローカル・CPU・オンラインが動きます（本番の WS は `wss://そのドメイン/ws`）
+
+無料プランはスリープすることがあります（アクセスがしばらく無いと落ち、初回が遅い）。

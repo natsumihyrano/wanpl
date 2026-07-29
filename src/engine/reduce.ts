@@ -2,12 +2,15 @@ import type { Action, FieldDog, GameState, PlayerId } from './types'
 import {
   checkWinner,
   cloneState,
+  critChance,
   drawCards,
   effectiveDefense,
   effectivePower,
   getDef,
   hasGuard,
+  hasSpots,
   initialCommandUses,
+  nextRng,
   opponentOf,
   spendCommandUse,
   startTurn,
@@ -50,13 +53,20 @@ function applySummonEffects(
   const oppId = opponentOf(playerId)
   const opp = s.players[oppId]
 
-  if (def.ability === 'friendly') {
+  if (def.ability === 'friendly' || def.ability === 'cozy') {
     p.treats += 1
-    s.log.push(`${who}の友好: おやつ+1`)
+    s.log.push(
+      `${who}の${def.abilityName}: おやつ+1`,
+    )
   }
   if (def.ability === 'swim') {
     p.treats += 2
     s.log.push(`${who}の救助: おやつ+2`)
+  }
+  if (def.ability === 'barrel') {
+    p.treats += 1
+    p.guardCharges = Math.max(p.guardCharges, 1)
+    s.log.push(`${who}の樽のお酒: おやつ+1＆みきり構え`)
   }
   if (def.ability === 'nap') {
     p.energy = Math.min(5, p.energy + 1)
@@ -64,7 +74,13 @@ function applySummonEffects(
   }
   if (def.ability === 'howl') {
     s.howlActive = true
+    s.foeHowlOwner = null
     s.log.push(`${who}の遠吠え: このターン守り-1`)
+  }
+  if (def.ability === 'blizzard') {
+    s.foeHowlOwner = playerId
+    s.howlActive = false
+    s.log.push(`${who}の猛吹雪: 相手の犬だけ守り-1`)
   }
   if (def.ability === 'nibble') {
     opp.treats -= 1
@@ -79,7 +95,10 @@ function applySummonEffects(
   }
   if (def.ability === 'herding') {
     const heritable = opp.field.filter(
-      (d) => getDef(d.cardId).ability !== 'stubborn',
+      (d) => {
+        const a = getDef(d.cardId).ability
+        return a !== 'stubborn' && a !== 'ward'
+      },
     )
     if (heritable.length > 0) {
       s.pendingHerding = { player: playerId, corgiInstanceId: dog.instanceId }
@@ -102,9 +121,11 @@ function removeFromField(
   const idx = p.field.findIndex((d) => d.instanceId === instanceId)
   if (idx < 0) return { state: s, removed: null }
   const [removed] = p.field.splice(idx, 1)
-  s.log.push(
-    `${playerId === 0 ? 'P1' : 'P2'}の ${getDef(removed.cardId).name} が${reason}`,
-  )
+  const who = playerId === 0 ? 'P1' : 'P2'
+  s.log.push(`${who}の ${getDef(removed.cardId).name} が${reason}`)
+  if (reason === '退場した' && getDef(removed.cardId).ability === 'last_bark') {
+    drawCards(p, 1, s.log, who)
+  }
   return { state: s, removed }
 }
 
@@ -118,7 +139,7 @@ function dealTreatDamage(
   let dmg = amount
   if (fromSamoyedBlock && dmg > 0) {
     dmg = Math.max(0, dmg - 1)
-    s.log.push('もふもふ: おやつダメージを1防いだ')
+    s.log.push('特技: おやつダメージを1防いだ')
   }
   s.players[targetPlayer].treats -= dmg
   if (dmg > 0) {
@@ -154,6 +175,9 @@ function resolveChallenge(
   if (!spendCommandUse(atkLive, command)) return state
 
   const target = defPlayer.field.find((d) => d.lane === targetLane) ?? null
+  if (cmd.effect.onlyEmpty && target) return state
+  if (cmd.effect.onlyDog && !target) return state
+
   let power = effectivePower(atkLive, atkPlayer)
   const powerBonus = cmd.effect.powerBonus ?? 0
   const emptyBonus = cmd.effect.emptyBonus ?? 0
@@ -165,10 +189,18 @@ function resolveChallenge(
   }
 
   if (!target) {
-    let dmg = Math.max(1, power - 1)
+    let dmg =
+      atkDef.ability === 'silk' ? Math.max(1, power) : Math.max(1, power - 1)
+    if (atkDef.ability === 'silk') {
+      s.log.push(`${who}の流麗: 空きレーンにフルパワー`)
+    }
     if (emptyBonus > 0) {
       dmg += emptyBonus
       s.log.push(`${who}の「${cmd.name}」: 空きレーンダメージ+${emptyBonus}`)
+    }
+    if (hasSpots(atkPlayer)) {
+      dmg += 1
+      s.log.push(`${who}のスポット: 空きレーン+1`)
     }
     if (hasGuard(defPlayer)) {
       dmg = Math.max(0, dmg - 1)
@@ -181,6 +213,10 @@ function resolveChallenge(
 
     s = dealTreatDamage(s, defenderId, dmg, false)
 
+    if (atkDef.ability === 'loot' && dmg > 0 && s.winner === null) {
+      s.players[attackerId].treats += 1
+      s.log.push(`${who}のお宝掘り: おやつ+1`)
+    }
     if (atkDef.ability === 'fetch' && s.winner === null) {
       drawCards(s.players[attackerId], 1, s.log, who)
     }
@@ -199,7 +235,7 @@ function resolveChallenge(
         })
       }
     }
-    return s
+    return checkWinner(s)
   }
 
   const targetDef = getDef(target.cardId)
@@ -235,9 +271,15 @@ function resolveChallenge(
     power = Math.max(0, power - 1)
   }
 
-  let defense = effectiveDefense(target, s.howlActive)
-  if (atkDef.ability === 'track') {
+  let defense = effectiveDefense(target, s.howlActive, {
+    foeHowlOwner: s.foeHowlOwner,
+    ownerId: defenderId,
+  })
+  if (atkDef.ability === 'track' || atkDef.ability === 'gale') {
     defense = Math.max(0, defense - 1)
+    if (atkDef.ability === 'gale') {
+      s.log.push(`${who}の疾風: 守りを1無視`)
+    }
   }
   if (pierce > 0) {
     defense = Math.max(0, defense - pierce)
@@ -255,14 +297,43 @@ function resolveChallenge(
 
   atkLive.hasChallenged = true
 
-  if (power > defense) {
-    let overflow = power - defense
-    const isSamoyed = targetDef.ability === 'fluffy'
+  const ghostTie = atkDef.ability === 'ghost' && power === defense
+  let critical = false
+  if (
+    !ghostTie &&
+    power < defense &&
+    targetDef.ability !== 'gentle'
+  ) {
+    const deficit = defense - power
+    const roll = nextRng(s.rngSeed)
+    s.rngSeed = roll.seed
+    if (roll.value < critChance(deficit)) {
+      critical = true
+    }
+  }
+
+  const challengeWins = power > defense || ghostTie || critical
+
+  if (challengeWins) {
+    let overflow = Math.max(0, power - defense)
+    if (critical) {
+      overflow = Math.max(1, overflow)
+      s.fx = { kind: 'critical' }
+      s.log.push('クリティカル！守りを突破した')
+    } else if (ghostTie) {
+      s.log.push(`${who}の灰の亡霊: 同点でも退場させた`)
+    }
+    const isSamoyed =
+      targetDef.ability === 'fluffy' || targetDef.ability === 'ward'
     const rm = removeFromField(s, defenderId, target.instanceId, '退場した')
     s = rm.state
     if (atkDef.ability === 'dig') {
       overflow += 1
       s.log.push('掘る: 追加おやつ1')
+    }
+    if (atkDef.ability === 'trophy') {
+      s.players[attackerId].treats += 1
+      s.log.push(`${who}の漆黒の戦利品: おやつ+1`)
     }
     s = dealTreatDamage(s, defenderId, overflow, isSamoyed)
 
@@ -275,6 +346,23 @@ function resolveChallenge(
     }
   } else {
     s.log.push('チャレンジ失敗…守りきられた')
+    if (targetDef.ability === 'grit') {
+      s.players[defenderId].treats += 1
+      s.log.push(`${foe}の根性: おやつ+1`)
+    }
+    if (targetDef.ability === 'blue_tongue') {
+      const atkSide = s.players[attackerId]
+      if (atkSide.energy > 0) {
+        atkSide.energy -= 1
+        s.log.push(`${foe}の青舌: ${who}の元気-1（残り${atkSide.energy}）`)
+      } else {
+        s.log.push(`${foe}の青舌: 元気はもう0だった`)
+      }
+    }
+    if (atkDef.ability === 'fight' && s.winner === null) {
+      s = dealTreatDamage(s, defenderId, 1, false)
+      s.log.push(`${who}の闘志: 失敗してもおやつ-1`)
+    }
   }
 
   if (atkDef.ability === 'bounce' && s.winner === null) {
@@ -299,11 +387,16 @@ function resolveChallenge(
     }
   }
 
-  return s
+  return checkWinner(s)
 }
 
 export function reduce(state: GameState, action: Action): GameState {
   if (state.winner !== null || state.phase === 'ended') return state
+
+  // 前アクションの演出をクリア
+  if (state.fx) {
+    state = { ...state, fx: null }
+  }
 
   if (state.pendingHerding) {
     if (action.type === 'END_TURN') {
@@ -311,6 +404,7 @@ export function reduce(state: GameState, action: Action): GameState {
       s.pendingHerding = null
       s.log.push('牧畜できる相手がいなかった')
       s.howlActive = false
+      s.foeHowlOwner = null
       const pid = s.activePlayer
       s.activePlayer = opponentOf(pid)
       if (s.activePlayer === 0) s.turn += 1
@@ -328,7 +422,11 @@ export function reduce(state: GameState, action: Action): GameState {
       (d) => d.instanceId === action.targetInstanceId,
     )
     if (!target) return state
-    if (getDef(target.cardId).ability === 'stubborn') return state
+    if (
+      getDef(target.cardId).ability === 'stubborn' ||
+      getDef(target.cardId).ability === 'ward'
+    )
+      return state
     const rm = removeFromField(s, oppId, target.instanceId, '控えに戻った')
     s = rm.state
     s.pendingHerding = null
@@ -404,6 +502,18 @@ export function reduce(state: GameState, action: Action): GameState {
         treatsGain += effect.behindTreats
         notes.push('踏ん張り')
       }
+      if (def.ability === 'nurse' && (effect.treats ?? 0) > 0) {
+        treatsGain += 1
+        notes.push('もふケア')
+      }
+      if (
+        def.ability === 'comeback' &&
+        (effect.treats ?? 0) > 0 &&
+        p.treats <= Math.floor(STARTING_TREATS / 2)
+      ) {
+        treatsGain += 1
+        notes.push('救援')
+      }
       if (treatsGain > 0) {
         p.treats += treatsGain
         s.log.push(
@@ -411,14 +521,42 @@ export function reduce(state: GameState, action: Action): GameState {
         )
       }
       if (effect.guardCharges) {
-        p.guardCharges = effect.guardCharges
-        s.log.push(`${who}のみきり構え！`)
+        p.guardCharges = Math.max(p.guardCharges, effect.guardCharges)
+        s.log.push(
+          `${who}のみきり構え！（残${p.guardCharges}）`,
+        )
       }
       if (energyGain > 0) {
         p.energy += energyGain
         s.log.push(
           `${who}の${cmd.name}: 元気+${energyGain}${notes.length && treatsGain === 0 ? `（${notes.join('・')}）` : ''}`,
         )
+      }
+      if (effect.clearHowl) {
+        s.howlActive = false
+        s.foeHowlOwner = null
+        s.log.push(`${who}の${cmd.name}: 遠吠え・猛吹雪を打ち消した`)
+      }
+      if (effect.startHowl) {
+        s.howlActive = true
+        s.foeHowlOwner = null
+        s.log.push(`${who}の${cmd.name}: 遠吠え！守り-1`)
+      }
+      if (effect.startFoeHowl) {
+        s.howlActive = false
+        s.foeHowlOwner = pid
+        s.log.push(`${who}の${cmd.name}: 猛吹雪！相手の守り-1`)
+      }
+      if (effect.drainOppEnergy && effect.drainOppEnergy > 0) {
+        const opp = s.players[opponentOf(pid)]
+        const before = opp.energy
+        opp.energy = Math.max(0, opp.energy - effect.drainOppEnergy)
+        s.log.push(
+          `${who}の${cmd.name}: 相手の元気-${before - opp.energy}（残り${opp.energy}）`,
+        )
+      }
+      if (effect.draw && effect.draw > 0) {
+        drawCards(p, effect.draw, s.log, who)
       }
     }
     return checkWinner(s)
@@ -442,6 +580,7 @@ export function reduce(state: GameState, action: Action): GameState {
   if (action.type === 'END_TURN') {
     let s = cloneState(state)
     s.howlActive = false
+    s.foeHowlOwner = null
     s.pendingHerding = null
     s.activePlayer = opponentOf(pid)
     if (s.activePlayer === 0) s.turn += 1

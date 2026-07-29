@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // サブディレクトリや静的アップでも読めるように相対パスにする
+  base: './',
   plugins: [react()],
   server: {
     hmr: true,

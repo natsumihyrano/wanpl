@@ -3,6 +3,7 @@ import { getDef, opponentOf, dogHasCommandUses } from './helpers'
 import {
   isChallengeCommand,
   isRestCommand,
+  COMMAND_MAP,
   type CommandId,
 } from '../data/battle'
 
@@ -29,6 +30,7 @@ export function listLegalActions(state: GameState): Action[] {
     const opp = state.players[opponentOf(pid)]
     for (const d of opp.field) {
       if (getDef(d.cardId).ability === 'stubborn') continue
+      if (getDef(d.cardId).ability === 'ward') continue
       actions.push({ type: 'HERDING_TARGET', targetInstanceId: d.instanceId })
     }
     if (actions.length === 0) {
@@ -65,7 +67,14 @@ export function listLegalActions(state: GameState): Action[] {
           command,
         })
       } else if (isChallengeCommand(command)) {
+        const effect = COMMAND_MAP[command].effect
+        const opp = state.players[opponentOf(pid)]
         for (let lane = 0; lane < 3; lane++) {
+          const occupied = opp.field.some((d) => d.lane === lane)
+          if (effect.kind === 'challenge') {
+            if (effect.onlyEmpty && occupied) continue
+            if (effect.onlyDog && !occupied) continue
+          }
           actions.push({
             type: 'CHALLENGE',
             attackerInstanceId: dog.instanceId,

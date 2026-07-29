@@ -38,11 +38,17 @@ export interface GameState {
   turn: number
   phase: Phase
   howlActive: boolean
+  /** 猛吹雪: 召喚側の相手だけ守り-1 */
+  foeHowlOwner: PlayerId | null
   winner: PlayerId | null
   log: string[]
   pendingHerding: { player: PlayerId; corgiInstanceId: string } | null
   rngSeed: number
+  /** 直近アクションの演出（次アクションで消す） */
+  fx: CombatFx | null
 }
+
+export type CombatFx = { kind: 'critical' }
 
 export type Action =
   | { type: 'SUMMON'; instanceId: string; lane: number }
@@ -103,8 +109,10 @@ export interface PublicState {
   turn: number
   phase: Phase
   howlActive: boolean
+  foeHowlOwner: PlayerId | null
   winner: PlayerId | null
   log: string[]
   pendingHerding: GameState['pendingHerding']
+  fx: CombatFx | null
   players: [PublicPlayerView, PublicPlayerView]
 }

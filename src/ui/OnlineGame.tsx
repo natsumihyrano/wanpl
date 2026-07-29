@@ -13,6 +13,7 @@ import { PlayerBoard } from './PlayerBoard'
 import { CommandPicker } from './CommandPicker'
 import { DogPeek } from './DogPeek'
 import { ActiveEffectBar } from './ActiveEffectBar'
+import { CombatFxBanner } from './CombatFxBanner'
 import { getTurnHint, type SelectMode } from './turnGuide'
 import type { CommandId } from '../data/battle'
 
@@ -191,7 +192,7 @@ export function OnlineGame({ mode, onExit }: Props) {
   }
 
   const view = pub
-  const me: PlayerId = playerId
+  const me = playerId
   const opp: PlayerId = me === 0 ? 1 : 0
   const myHand = view.players[me].hand ?? []
   const pendingHerding =
@@ -231,7 +232,7 @@ export function OnlineGame({ mode, onExit }: Props) {
         : null
   const pickingDog =
     select.kind === 'field'
-      ? view.players[playerId].field.find((d) => d.instanceId === select.instanceId)
+      ? view.players[me].field.find((d) => d.instanceId === select.instanceId)
       : null
   const summonDog =
     select.kind === 'summon'
@@ -239,7 +240,7 @@ export function OnlineGame({ mode, onExit }: Props) {
       : null
   const challengeDog =
     select.kind === 'challenge'
-      ? view.players[playerId].field.find((d) => d.instanceId === select.attackerId)
+      ? view.players[me].field.find((d) => d.instanceId === select.attackerId)
       : null
   const peekDog = summonDog ?? challengeDog
 
@@ -281,7 +282,8 @@ export function OnlineGame({ mode, onExit }: Props) {
         {hint}
       </div>
 
-      <ActiveEffectBar pub={view} />
+      <ActiveEffectBar pub={pub} />
+      <CombatFxBanner fx={pub.fx} />
 
       {peekDog && (
         <DogPeek
@@ -295,13 +297,18 @@ export function OnlineGame({ mode, onExit }: Props) {
       )}
 
       <PlayerBoard
-        player={view.players[opp]}
+        player={pub.players[opp]}
         label="相手（おやつを奪え）"
         isActive={state.activePlayer === opp}
         isYou={false}
         highlightLanes={select.kind === 'challenge' && inMain}
         herdingMode={!!pendingHerding}
         selectableDogs={(!!pendingHerding || select.kind === 'challenge') && inMain}
+        matchupFrom={
+          select.kind === 'challenge' && challengeDog
+            ? challengeDog.element
+            : null
+        }
         onLaneClick={(lane) => {
           if (select.kind === 'challenge') {
             dispatch({
@@ -332,7 +339,7 @@ export function OnlineGame({ mode, onExit }: Props) {
       </div>
 
       <PlayerBoard
-        player={view.players[playerId]}
+        player={pub.players[playerId]}
         label="あなた"
         isActive={myTurn}
         isYou
@@ -359,7 +366,7 @@ export function OnlineGame({ mode, onExit }: Props) {
 
       <div className="hand-dock">
         <div className="hand-dock__label">
-          手札 — タップして場に出す（元気 {view.players[playerId].energy}）
+          手札 — タップして場に出す（元気 {pub.players[playerId].energy}）
         </div>
         <div className="hand-row">
           {myHand.map((card) => {
@@ -367,8 +374,8 @@ export function OnlineGame({ mode, onExit }: Props) {
               myTurn &&
               inMain &&
               !pendingHerding &&
-              view.players[playerId].energy >= card.cost &&
-              view.players[playerId].field.length < 3
+              pub.players[playerId].energy >= card.cost &&
+              pub.players[playerId].field.length < 3
             return (
               <DogCard
                 key={card.instanceId}
@@ -393,7 +400,7 @@ export function OnlineGame({ mode, onExit }: Props) {
       <aside className="log-panel">
         <h3>できごと</h3>
         <ul>
-          {[...view.log].reverse().map((line, i) => (
+          {[...pub.log].reverse().map((line, i) => (
             <li key={`${i}-${line}`}>{line}</li>
           ))}
         </ul>

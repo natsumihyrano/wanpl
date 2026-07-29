@@ -488,10 +488,10 @@ input {
   height: 100dvh;
   max-height: 100dvh;
   overflow: hidden;
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto minmax(0, 1.15fr) auto;
-  gap: 0.3rem;
-  padding: 0.35rem 0.5rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.3rem 0.45rem 0.35rem;
   max-width: 980px;
   margin: 0 auto;
   position: relative;
@@ -501,7 +501,8 @@ input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  flex: 0 0 auto;
 }
 
 .table-top__center {
@@ -544,11 +545,12 @@ input {
   background: var(--cream);
   border: 3px solid var(--ink);
   border-radius: 0;
-  padding: 0.3rem 0.65rem;
+  padding: 0.22rem 0.55rem;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   box-shadow: 3px 3px 0 var(--ink);
   animation: banner-pop 0.25s steps(3, end);
+  flex: 0 0 auto;
 }
 
 .banner--herding {
@@ -574,11 +576,13 @@ input {
   background: rgba(240, 244, 232, 0.82);
   border: 3px solid var(--ink);
   border-radius: 0;
-  padding: 0.35rem 0.45rem 0.45rem;
+  padding: 0.25rem 0.35rem 0.3rem;
   box-shadow: 4px 4px 0 rgba(26, 32, 24, 0.35);
   min-height: 0;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .board-side.is-active {
@@ -660,9 +664,10 @@ input {
 .lanes {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.35rem;
+  gap: 0.25rem;
   flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
 }
 
 .lane {
@@ -681,7 +686,8 @@ input {
     #d8e8c0;
   display: grid;
   place-items: center;
-  padding: 0.2rem;
+  padding: 0.15rem;
+  overflow: hidden;
 }
 
 .lane--targetable {
@@ -690,6 +696,21 @@ input {
   border-color: var(--accent);
   background: #ffe8c0;
   animation: lane-glow 0.8s steps(2, end) infinite alternate;
+}
+
+.lane--targetable.lane--match-adv {
+  border-color: #2a8878;
+  background: #d4efe4;
+}
+
+.lane--targetable.lane--match-dis {
+  border-color: #c03050;
+  background: #f5d6dc;
+}
+
+.lane--targetable.lane--match-even {
+  border-color: #8a8060;
+  background: #efe6d0;
 }
 
 .lane--empty-face {
@@ -744,10 +765,11 @@ input {
   border: 3px solid var(--ink);
   border-bottom: none;
   border-radius: 0;
-  padding: 0.3rem 0.35rem 0.4rem;
+  padding: 0.25rem 0.35rem 0.3rem;
   box-shadow: 0 -4px 0 rgba(0, 0, 0, 0.2);
   min-height: 0;
-  max-height: 26dvh;
+  max-height: 22dvh;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1101,35 +1123,35 @@ input {
 
 .effect-bar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  justify-content: flex-start;
   max-width: 100%;
-  max-height: 4.2rem;
+  max-height: 2.4rem;
   overflow-x: auto;
-  overflow-y: auto;
-  padding: 0 0.15rem;
+  overflow-y: hidden;
+  padding: 0 0.1rem;
   flex: 0 0 auto;
 }
 
 .effect-chip {
   display: inline-flex;
-  flex-direction: column;
-  gap: 0.05rem;
-  max-width: 11rem;
-  padding: 0.18rem 0.4rem;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.25rem;
+  max-width: 14rem;
+  flex: 0 0 auto;
+  padding: 0.12rem 0.35rem;
   border: 2px solid var(--ink);
   background: #ffe8c8;
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   line-height: 1.2;
-  box-shadow: 2px 2px 0 rgba(26, 32, 24, 0.2);
+  box-shadow: 1px 1px 0 rgba(26, 32, 24, 0.2);
 }
 
 .effect-chip strong {
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .effect-chip em {
@@ -1138,6 +1160,7 @@ input {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 9rem;
 }
 
 .effect-chip--howl {
@@ -1275,54 +1298,58 @@ input {
   display: block;
 }
 
-/* 場・手札はコンパクト（顔は切らない・高さ固定） */
+/* 場・手札はコンパクト（レーン枠内に収める） */
 .lane .dog-card {
-  width: min(100%, 108px);
-  height: 132px;
+  width: min(100%, 96px);
+  height: 100%;
+  max-height: 118px;
   box-sizing: border-box;
-  padding: 1.4rem 0.28rem 0.28rem;
-  gap: 0.1rem;
+  padding: 1.15rem 0.2rem 0.18rem;
+  gap: 0.06rem;
   overflow: hidden;
+  min-height: 0;
 }
 
 .lane .dog-card__cost {
-  width: 20px;
-  height: 20px;
-  font-size: 0.7rem;
-  top: 3px;
-  right: 3px;
+  width: 18px;
+  height: 18px;
+  font-size: 0.62rem;
+  top: 2px;
+  right: 2px;
 }
 
 .lane .dog-card__element {
-  top: 3px;
-  left: 3px;
-  font-size: 0.5rem;
+  top: 2px;
+  left: 2px;
+  font-size: 0.48rem;
   padding: 2px 3px;
-  max-width: 4rem;
+  max-width: 3.4rem;
 }
 
 .lane .dog-card__sil,
 .lane .dog-card--art .dog-card__sil {
-  height: 52px;
+  height: auto;
   flex: 1 1 auto;
+  min-height: 0;
 }
 
 .lane .dog-card__art {
-  width: 50px;
-  height: 50px;
+  width: min(44px, 90%);
+  height: min(44px, 90%);
+  max-height: 48px;
 }
 
 .lane .dog-card__name {
-  font-size: 0.7rem;
-  line-height: 1.15;
-  height: 1.15em;
+  font-size: 0.62rem;
+  line-height: 1.1;
+  height: 1.1em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .lane .dog-card__stats {
-  font-size: 0.65rem;
+  font-size: 0.58rem;
 }
 
 .lane .dog-card__ability {
@@ -1331,53 +1358,52 @@ input {
 
 .hand-dock .dog-card {
   flex: 0 0 auto;
-  width: 78px;
-  height: 118px;
+  width: 72px;
+  height: 108px;
   box-sizing: border-box;
-  /* コスト／属性バッジの下に顔を置く */
-  padding: 1.35rem 0.25rem 0.25rem;
-  gap: 0.1rem;
+  padding: 1.2rem 0.2rem 0.2rem;
+  gap: 0.08rem;
   overflow: hidden;
 }
 
 .hand-dock .dog-card__cost {
-  width: 18px;
-  height: 18px;
-  font-size: 0.65rem;
-  top: 3px;
-  right: 3px;
+  width: 16px;
+  height: 16px;
+  font-size: 0.58rem;
+  top: 2px;
+  right: 2px;
 }
 
 .hand-dock .dog-card__element {
-  top: 3px;
-  left: 3px;
-  font-size: 0.5rem;
+  top: 2px;
+  left: 2px;
+  font-size: 0.46rem;
   padding: 2px 3px;
-  max-width: 3.6rem;
+  max-width: 3.2rem;
 }
 
 .hand-dock .dog-card__sil,
 .hand-dock .dog-card--art .dog-card__sil {
-  height: 48px;
+  height: 42px;
   flex: 1 1 auto;
 }
 
 .hand-dock .dog-card__art {
-  width: 46px;
-  height: 46px;
+  width: 40px;
+  height: 40px;
 }
 
 .hand-dock .dog-card__name {
-  font-size: 0.62rem;
-  line-height: 1.15;
-  height: 1.15em;
+  font-size: 0.58rem;
+  line-height: 1.1;
+  height: 1.1em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .hand-dock .dog-card__stats {
-  font-size: 0.62rem;
+  font-size: 0.56rem;
 }
 
 .hand-dock .dog-card__ability {
@@ -1600,6 +1626,53 @@ input {
   }
 }
 
+.combat-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  animation: combat-fx-in 1.4s ease-out both;
+}
+
+.combat-fx__label {
+  font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', sans-serif;
+  font-size: clamp(2rem, 8vw, 3.4rem);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #fff8e8;
+  background: #c03030;
+  border: 4px solid var(--ink);
+  padding: 0.55rem 1.4rem;
+  transform: rotate(-4deg);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.combat-fx--critical .combat-fx__label {
+  background: #d9481c;
+}
+
+@keyframes combat-fx-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  28% {
+    transform: scale(1);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 /* Dog catalog / 犬図鑑 */
 .dog-catalog {
   height: 100dvh;
@@ -1731,6 +1804,14 @@ input {
   padding: 2px 6px;
   border: 2px solid var(--ink);
   background: var(--el);
+}
+
+.dex-card__role {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border: 2px solid var(--ink);
+  background: #e8f0d8;
 }
 
 .dex-card__cost {

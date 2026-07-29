@@ -29,7 +29,7 @@ export function getTurnHint(
     return 'この犬のコマンドを選ぼう（残り回数に注意）'
   }
   if (select.kind === 'challenge') {
-    return '相手のレーンをタップ（属性相性に注意！）'
+    return '相手のレーンをタップ（緑＝有利・赤＝不利）'
   }
 
   if (onlyEndTurnLeft(state)) {

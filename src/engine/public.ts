@@ -38,7 +38,8 @@ function commandViews(
 function toView(
   dog: FieldDog,
   owner: PlayerState,
-  howlActive: boolean,
+  ownerId: PlayerId,
+  state: GameState,
 ): PublicDogView {
   const def = getDef(dog.cardId)
   return {
@@ -46,7 +47,10 @@ function toView(
     cardId: dog.cardId,
     lane: dog.lane,
     power: effectivePower(dog, owner),
-    defense: effectiveDefense(dog, howlActive),
+    defense: effectiveDefense(dog, state.howlActive, {
+      foeHowlOwner: state.foeHowlOwner,
+      ownerId,
+    }),
     cost: def.cost,
     name: def.name,
     abilityName: def.abilityName,
@@ -118,7 +122,7 @@ export function toPublicState(
       hand: handView(p.hand, showHand),
       field: [...p.field]
         .sort((a, b) => a.lane - b.lane)
-        .map((d) => toView(d, p, state.howlActive)),
+        .map((d) => toView(d, p, pid, state)),
       guardCharges: p.guardCharges,
     }
   }) as PublicState['players']
@@ -129,9 +133,11 @@ export function toPublicState(
     turn: state.turn,
     phase: state.phase,
     howlActive: state.howlActive,
+    foeHowlOwner: state.foeHowlOwner,
     winner: state.winner,
     log: state.log.slice(-12),
     pendingHerding: state.pendingHerding,
+    fx: state.fx,
     players,
   }
 }

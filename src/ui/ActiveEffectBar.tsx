@@ -20,6 +20,16 @@ export function collectActiveEffects(pub: PublicState): ActiveEffectView[] {
       detail: '全員の守り-1（ターン終了まで）',
       tone: 'howl',
     })
+  } else if (pub.foeHowlOwner !== null) {
+    effects.push({
+      id: 'blizzard',
+      label: '猛吹雪',
+      detail:
+        pub.foeHowlOwner === you
+          ? '相手の犬の守り-1（ターン終了まで）'
+          : 'あなたの犬の守り-1（ターン終了まで）',
+      tone: 'howl',
+    })
   }
 
   const myGuard = pub.players[you].guardCharges
@@ -86,11 +96,22 @@ export function collectActiveEffects(pub: PublicState): ActiveEffectView[] {
           tone: 'aura',
         })
       }
-      if (dog.ability === 'sprint') {
+      if (dog.ability === 'sprint' || dog.ability === 'gale') {
         effects.push({
           id: `sprint-${dog.instanceId}`,
           label: `${dog.name}の${dog.abilityName}`,
-          detail: 'チャレンジのパワー+1（場にいる間）',
+          detail:
+            dog.ability === 'gale'
+              ? 'パワー+1＆守り1無視（場にいる間）'
+              : 'チャレンジのパワー+1（場にいる間）',
+          tone: 'aura',
+        })
+      }
+      if (dog.ability === 'spots') {
+        effects.push({
+          id: `spots-${dog.instanceId}`,
+          label: `${dog.name}のスポット`,
+          detail: '空きレーンダメージ+1（場にいる間）',
           tone: 'aura',
         })
       }
@@ -115,6 +136,118 @@ export function collectActiveEffects(pub: PublicState): ActiveEffectView[] {
           id: `fluffy-${dog.instanceId}`,
           label: `${dog.name}のもふもふ`,
           detail: '退場時のおやつダメージを1防ぐ',
+          tone: 'aura',
+        })
+      }
+      if (dog.ability === 'grit') {
+        effects.push({
+          id: `grit-${dog.instanceId}`,
+          label: `${dog.name}の根性`,
+          detail: '守りきるとおやつ+1（場にいる間）',
+          tone: 'aura',
+        })
+      }
+      if (dog.ability === 'loot') {
+        effects.push({
+          id: `loot-${dog.instanceId}`,
+          label: `${dog.name}のお宝掘り`,
+          detail: '空きレーン成功でおやつ+1',
+          tone: 'aura',
+        })
+      }
+      if (dog.ability === 'last_bark') {
+        effects.push({
+          id: `bark-${dog.instanceId}`,
+          label: `${dog.name}のおかえり吠え`,
+          detail: '退場時に手札+1',
+          tone: 'aura',
+        })
+      }
+      if (dog.ability === 'trophy') {
+        effects.push({
+          id: `trophy-${dog.instanceId}`,
+          label: `${dog.name}の戦利品`,
+          detail: '犬を退場させるとおやつ+1',
+          tone: 'aura',
+        })
+      }
+      if (dog.ability === 'ghost') {
+        effects.push({
+          id: `ghost-${dog.instanceId}`,
+          label: `${dog.name}の灰の亡霊`,
+          detail: '同点でもチャレンジ成功（ダメ0）',
+          tone: 'aura',
+        })
+      }
+      if (dog.ability === 'blue_tongue') {
+        effects.push({
+          id: `blue-${dog.instanceId}`,
+          label: `${dog.name}の青舌`,
+          detail: '守りきると相手の元気-1',
+          tone: 'aura',
+        })
+      }
+      if (dog.ability === 'silent') {
+        effects.push({
+          id: `silent-${dog.instanceId}`,
+          label: `${dog.name}の無声`,
+          detail: '遠吠え・猛吹雪の守り-1を受けない',
+          tone: 'aura',
+        })
+      }
+      if (dog.ability === 'silk') {
+        effects.push({
+          id: `silk-${dog.instanceId}`,
+          label: `${dog.name}の流麗`,
+          detail: '空きレーンにフルパワー',
+          tone: 'aura',
+        })
+      }
+      if (dog.ability === 'gentle') {
+        effects.push({
+          id: `gentle-${dog.instanceId}`,
+          label: `${dog.name}のおっとり`,
+          detail: 'クリティカル無効（場にいる間）',
+          tone: 'aura',
+        })
+      }
+      if (dog.ability === 'ward') {
+        effects.push({
+          id: `ward-${dog.instanceId}`,
+          label: `${dog.name}の守護`,
+          detail: '牧畜無効・退場ダメ-1',
+          tone: 'aura',
+        })
+      }
+      if (dog.ability === 'fight') {
+        effects.push({
+          id: `fight-${dog.instanceId}`,
+          label: `${dog.name}の闘志`,
+          detail: 'チャレンジ失敗でもおやつ-1',
+          tone: 'aura',
+        })
+      }
+      if (dog.ability === 'aloof') {
+        effects.push({
+          id: `aloof-${dog.instanceId}`,
+          label: `${dog.name}の孤高`,
+          detail: '単独ならパワー+1（場にいる間）',
+          tone: 'aura',
+        })
+      }
+      if (dog.ability === 'nurse') {
+        effects.push({
+          id: `nurse-${dog.instanceId}`,
+          label: `${dog.name}のもふケア`,
+          detail: '回復のおやつ+1',
+          tone: 'aura',
+        })
+      }
+      if (dog.ability === 'comeback') {
+        effects.push({
+          id: `comeback-${dog.instanceId}`,
+          label: `${dog.name}の救援`,
+          detail: 'おやつ半分以下で回復+1',
           tone: 'aura',
         })
       }

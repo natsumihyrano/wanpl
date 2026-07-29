@@ -1,5 +1,5 @@
 export { DOGS, DOG_MAP, DECK_A, DECK_B, DEAL_POOL } from '../data/dogs'
-export type { DogDef, AbilityId } from '../data/dogs'
+export type { DogDef, AbilityId, DogRole } from '../data/dogs'
 export {
   ELEMENTS,
   COMMANDS,
@@ -20,6 +20,7 @@ export type {
   PublicCommandView,
   FieldDog,
   Phase,
+  CombatFx,
 } from './types'
 export { createGame, cloneState, getDef, opponentOf, STARTING_TREATS } from './helpers'
 export { reduce } from './reduce'

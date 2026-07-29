@@ -16,6 +16,7 @@ import { PlayerBoard } from './PlayerBoard'
 import { CommandPicker } from './CommandPicker'
 import { DogPeek } from './DogPeek'
 import { ActiveEffectBar } from './ActiveEffectBar'
+import { CombatFxBanner } from './CombatFxBanner'
 import { getTurnHint, type SelectMode } from './turnGuide'
 import type { CommandId } from '../data/battle'
 
@@ -337,6 +338,7 @@ export function GameTable({ mode, onExit, onGameEnd }: Props) {
       </div>
 
       <ActiveEffectBar pub={pub} />
+      <CombatFxBanner fx={pub.fx} />
 
       {peekDog && (
         <DogPeek
@@ -358,6 +360,11 @@ export function GameTable({ mode, onExit, onGameEnd }: Props) {
         herdingMode={!!pendingHerding}
         selectableDogs={
           (!!pendingHerding || select.kind === 'challenge') && inMain
+        }
+        matchupFrom={
+          select.kind === 'challenge' && challengeDog
+            ? challengeDog.element
+            : null
         }
         onLaneClick={tryChallengeLane}
         onDogClick={onOppDogClick}

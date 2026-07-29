@@ -62,6 +62,14 @@ const SHEET_MAP = {
   st_bernard: 'src/assets/st_bernard.png',
   terrier: 'src/assets/terrier.png',
   whippet: 'src/assets/whippet.png',
+  weimaraner: 'src/assets/weimaraner.png',
+  chow_chow: 'src/assets/chowdren.png',
+  basenji: 'src/assets/basenji.png',
+  afghan_hound: 'src/assets/afghan_hound.png',
+  great_dane: 'src/assets/great_dane.png',
+  tibetan_mastiff: 'src/assets/tibetan.png',
+  tosa: 'src/assets/tosa.png',
+  borzoi: 'src/assets/borzoi.png',
 }
 
 const args = process.argv.slice(2)

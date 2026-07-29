@@ -6,7 +6,7 @@ import {
   type Action,
   type GameState,
 } from '../engine'
-import { effectiveDefense, effectivePower } from '../engine/helpers'
+import { effectiveDefense, effectivePower, critChance } from '../engine/helpers'
 import { COMMAND_MAP, typeModifier } from '../data/battle'
 import { STARTING_TREATS } from '../engine/helpers'
 
@@ -40,6 +40,24 @@ function scoreAction(state: GameState, action: Action): number {
       if (def.ability === 'herding') score += 10
       if (def.ability === 'nibble') score += 9
       if (def.ability === 'rally') score += 10
+      if (def.ability === 'howl' || def.ability === 'blizzard') score += 8
+      if (def.ability === 'barrel' || def.ability === 'swim') score += 6
+      if (def.ability === 'cheer') score += 7
+      if (def.ability === 'spots') score += 5
+      if (def.ability === 'gale') score += 6
+      if (def.ability === 'ghost') score += 5
+      if (def.ability === 'silent' && (state.howlActive || state.foeHowlOwner != null))
+        score += 6
+      if (def.ability === 'silk') score += 4
+      if (def.ability === 'ward') score += 7
+      if (def.ability === 'gentle') score += 3
+      if (def.ability === 'fight') score += 4
+      if (def.ability === 'aloof') score += 3
+      if (def.ability === 'nurse') score += 6
+      if (def.ability === 'comeback') {
+        score += 3
+        if (beforeMe.treats <= Math.floor(STARTING_TREATS / 2)) score += 6
+      }
     }
     if (
       !state.players[opponentOf(pid)].field.some((d) => d.lane === action.lane)
@@ -97,21 +115,59 @@ function scoreAction(state: GameState, action: Action): number {
         (d) => d.lane === action.targetLane,
       )
       if (!target) {
-        score += 20 + (power + (effect.emptyBonus ?? 0)) * 6
+        // engine: silk ? power : max(1, power - 1) + emptyBonus + spots − guard
+        const atkDef = getDef(atk.cardId)
+        let emptyDmg =
+          (atkDef.ability === 'silk'
+            ? Math.max(1, power)
+            : Math.max(1, power - 1)) + (effect.emptyBonus ?? 0)
+        if (
+          state.players[pid].field.some(
+            (d) => getDef(d.cardId).ability === 'spots',
+          )
+        ) {
+          emptyDmg += 1
+        }
+        if (
+          state.players[opponentOf(pid)].field.some(
+            (d) => getDef(d.cardId).ability === 'guard',
+          )
+        ) {
+          emptyDmg = Math.max(0, emptyDmg - 1)
+        }
+        score += 20 + emptyDmg * 6
         if ((effect.emptyBonus ?? 0) > 0) score += 4
+        if (atkDef.ability === 'loot') score += 5
+        if (atkDef.ability === 'silk') score += 4
       } else {
-        let defense = effectiveDefense(target, state.howlActive)
+        let defense = effectiveDefense(target, state.howlActive, {
+          foeHowlOwner: state.foeHowlOwner,
+          ownerId: opponentOf(pid),
+        })
         const tdef = getDef(target.cardId)
-        let pwr = power + typeModifier(getDef(atk.cardId).element, tdef.element)
-        if (getDef(atk.cardId).ability === 'track') {
+        const adef = getDef(atk.cardId)
+        let pwr = power + typeModifier(adef.element, tdef.element)
+        if (adef.ability === 'track' || adef.ability === 'gale') {
           defense = Math.max(0, defense - 1)
         }
         if ((effect.pierce ?? 0) > 0) {
           defense = Math.max(0, defense - (effect.pierce ?? 0))
         }
         if (tdef.ability === 'alert') pwr = Math.max(0, pwr - 1)
-        if (pwr > defense) score += 18 + (pwr - defense) * 5
-        else score -= 12
+        const ghostTie = adef.ability === 'ghost' && pwr === defense
+        if (pwr > defense || ghostTie) {
+          score += 18 + (pwr - defense) * 5
+          if (ghostTie) score += 10
+          if (adef.ability === 'trophy' || adef.ability === 'dig') score += 4
+        } else {
+          const deficit = defense - pwr
+          const chance =
+            tdef.ability === 'gentle' ? 0 : critChance(deficit)
+          score += -12 * (1 - chance) + (14 + chance * 8) * chance
+          if (tdef.ability === 'grit') score -= 3 * (1 - chance)
+          if (tdef.ability === 'blue_tongue') score -= 5 * (1 - chance)
+          if (adef.ability === 'fight') score += 6
+        }
         if ((effect.emptyBonus ?? 0) > 0) score -= 3
       }
     }
