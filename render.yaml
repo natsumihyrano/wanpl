@@ -3,6 +3,7 @@ services:
     name: wanpl
     runtime: node
     plan: free
-    buildCommand: npm ci && npm run build
+    # npm ci は npm 版差で lock 不整合になりやすいので install を使う
+    buildCommand: npm install && npm run build
     startCommand: NODE_ENV=production npm start
     healthCheckPath: /

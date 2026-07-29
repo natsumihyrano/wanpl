@@ -35,7 +35,7 @@ NODE_ENV=production PORT=8787 npm start
 2. [Render](https://render.com) で **New → Web Service**（または Blueprint で `render.yaml`）
 3. 設定例:
    - **Runtime**: Node
-   - **Build**: `npm ci && npm run build`
+   - **Build**: `npm install && npm run build`
    - **Start**: `NODE_ENV=production npm start`
    - **Health Check Path**: `/`
    - Node 20 以上（`.node-version` あり）
