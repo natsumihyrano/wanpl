@@ -108,7 +108,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'corgi',
-    name: 'コーギー',
+    name: 'ウェルシュコーギー',
     role: 'tempo',
     cost: 3,
     power: 2,
@@ -122,7 +122,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'golden',
-    name: 'ゴールデン',
+    name: 'ゴールデンレトリバー',
     role: 'support',
     cost: 2,
     power: 1,
@@ -136,7 +136,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'dachshund',
-    name: 'ダックス',
+    name: 'ダックスフンド',
     role: 'lane',
     cost: 1,
     power: 1,
@@ -150,7 +150,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'husky',
-    name: 'ハスキー',
+    name: 'シベリアンハスキー',
     role: 'support',
     cost: 3,
     power: 3,
@@ -178,7 +178,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'mastiff',
-    name: 'マスティフ',
+    name: 'イングリッシュマスティフ',
     role: 'tank',
     cost: 4,
     power: 2,
@@ -192,7 +192,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'labrador',
-    name: 'ラブラドール',
+    name: 'ラブラドールレトリバー',
     role: 'value',
     cost: 2,
     power: 2,
@@ -220,7 +220,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'terrier',
-    name: 'テリア',
+    name: 'ノーフォークテリア',
     role: 'assassin',
     cost: 2,
     power: 3,
@@ -262,7 +262,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'shepherd',
-    name: 'シェパード',
+    name: 'ジャーマンシェパード',
     role: 'bruiser',
     cost: 3,
     power: 2,
@@ -276,7 +276,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'newfoundland',
-    name: 'ニューファン',
+    name: 'ニューファンドランド',
     role: 'tank',
     cost: 4,
     power: 2,
@@ -332,7 +332,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'akita',
-    name: '秋田',
+    name: '秋田犬',
     role: 'tank',
     cost: 3,
     power: 2,
@@ -346,7 +346,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'bulldog',
-    name: 'ブルドッグ',
+    name: 'イングリッシュブルドッグ',
     role: 'bruiser',
     cost: 2,
     power: 2,
@@ -416,7 +416,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'french_bulldog',
-    name: 'フレブル',
+    name: 'フレンチブルドッグ',
     role: 'support',
     cost: 1,
     power: 1,
@@ -430,7 +430,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'malamute',
-    name: 'マラミュート',
+    name: 'アラスカンマラミュート',
     role: 'support',
     cost: 3,
     power: 2,
@@ -458,7 +458,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'collie',
-    name: 'コリー',
+    name: 'ラフコリー',
     role: 'support',
     cost: 3,
     power: 2,
@@ -472,7 +472,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'cocker',
-    name: 'コッカー',
+    name: 'アメリカンコッカー',
     role: 'value',
     cost: 2,
     power: 2,
@@ -486,7 +486,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'flat_coated',
-    name: 'フラットコーテッド',
+    name: 'フラットコーテッドレトリバー',
     role: 'value',
     cost: 3,
     power: 2,
@@ -556,7 +556,7 @@ export const DOGS: DogDef[] = [
   },
   {
     id: 'great_dane',
-    name: 'グレートデン',
+    name: 'グレートデーン',
     role: 'bruiser',
     cost: 4,
     power: 3,
