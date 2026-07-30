@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getDogSprite } from '../data/dogSprites'
 import {
   isSfxMuted,
@@ -6,6 +6,7 @@ import {
   toggleSfxMuted,
   unlockAudio,
 } from '../audio/sfx'
+import { pokeServerInBackground } from '../net/serverEndpoints'
 
 interface Props {
   onLocal: () => void
@@ -62,6 +63,13 @@ export function TitleScreen({
   onHelp,
 }: Props) {
   const [muted, setMuted] = useState(isSfxMuted)
+
+  useEffect(() => {
+    // タイトル表示中に先回りで API を起こす（分割デプロイ時も有効）
+    pokeServerInBackground()
+    const t = window.setInterval(pokeServerInBackground, 45_000)
+    return () => window.clearInterval(t)
+  }, [])
 
   function tap(fn: () => void) {
     unlockAudio()

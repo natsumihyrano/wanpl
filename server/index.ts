@@ -75,14 +75,36 @@ function findRoomByWs(ws: WebSocket): { room: Room; client: Client } | null {
 
 const app = express()
 
-if (isProd) {
+const corsOrigin = process.env.CORS_ORIGIN?.replace(/\/$/, '')
+const serveStatic = isProd && process.env.SERVE_STATIC !== '0'
+
+/** 静的サイトと API を分けたときの CORS（/health 用） */
+app.use((req, res, next) => {
+  if (corsOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', corsOrigin)
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(204)
+      return
+    }
+  }
+  next()
+})
+
+/** Render スリープ解除・疎通確認用（静的配信より先に登録） */
+app.get('/health', (_req, res) => {
+  res.set('Cache-Control', 'no-store')
+  res.json({ ok: true, service: 'wanpl' })
+})
+
+if (serveStatic) {
   const dist = path.join(__dirname, '../dist')
   app.use(express.static(dist))
-  app.get('/{*path}', (_req, res) => {
+  app.get('/{*path}', (req, res, next) => {
+    if (req.path === '/ws' || req.path === '/health') return next()
     res.sendFile(path.join(dist, 'index.html'))
   })
-} else {
-  app.get('/health', (_req, res) => res.json({ ok: true }))
 }
 
 const server = createServer(app)

@@ -9,6 +9,7 @@ import {
   type PublicDogView,
 } from '../engine'
 import { playSfxForTransition, unlockAudio } from '../audio/sfx'
+import { waitUntilServerAwake, wsUrl } from '../net/serverEndpoints'
 import { DogCard } from './DogCard'
 import { PlayerBoard } from './PlayerBoard'
 import { CommandPicker } from './CommandPicker'
@@ -32,28 +33,6 @@ interface Props {
   onExit: () => void
   onHelp?: () => void
   onCatalog?: () => void
-}
-
-function wsUrl() {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-  const host = location.hostname
-  const port = import.meta.env.VITE_WS_PORT ?? '8787'
-  if (import.meta.env.DEV) return `${proto}://${host}:${port}`
-  return `${proto}://${location.host}/ws`
-}
-
-/** Render スリープ解除用に HTTP で起こしてから WS 接続する */
-async function pokeServer(): Promise<void> {
-  if (import.meta.env.DEV) return
-  try {
-    await fetch(`${location.origin}/`, {
-      method: 'GET',
-      cache: 'no-store',
-      credentials: 'omit',
-    })
-  } catch {
-    /* コールドスタート中は失敗しがち。WS リトライに任せる */
-  }
 }
 
 export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
@@ -195,7 +174,11 @@ export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
     async function connect() {
       if (cancelledRef.current) return
       setWaking(true)
-      await pokeServer()
+      setStatus('サーバー起動中…')
+      // /health が通るまで待つ（ここで起動画面を出す）
+      await waitUntilServerAwake({
+        aborted: () => cancelledRef.current,
+      })
       if (cancelledRef.current) return
       try {
         const ws = new WebSocket(wsUrl())

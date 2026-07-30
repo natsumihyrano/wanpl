@@ -1,9 +1,33 @@
+# 既定: 1サービスで静的＋WS（従来どおり）
+# コールドスタートでタイトル自体が遅い場合は、下の「分割」コメントを参照
 services:
   - type: web
     name: wanpl
     runtime: node
     plan: free
-    # npm ci は npm 版差で lock 不整合になりやすいので install を使う
     buildCommand: npm install && npm run build
     startCommand: NODE_ENV=production npm start
-    healthCheckPath: /
+    healthCheckPath: /health
+
+# --- 分割デプロイ（推奨: 起動画面をちゃんと出す） ---
+# Static Site でフロントを常時配信し、Node は API/WS だけスリープさせる。
+# 1) wanpl-api を先にデプロイして URL を控える（例 https://wanpl-api.onrender.com）
+# 2) Static のビルド環境変数に
+#      VITE_API_ORIGIN=https://wanpl-api.onrender.com
+# 3) API 側に
+#      SERVE_STATIC=0
+#      CORS_ORIGIN=https://（StaticのURL）
+#
+# services:
+#   - type: web
+#     name: wanpl-api
+#     runtime: node
+#     plan: free
+#     buildCommand: npm install && npm run build
+#     startCommand: NODE_ENV=production SERVE_STATIC=0 npm start
+#     healthCheckPath: /health
+#   - type: web
+#     name: wanpl
+#     runtime: static
+#     buildCommand: npm install && npm run build
+#     staticPublishPath: dist
