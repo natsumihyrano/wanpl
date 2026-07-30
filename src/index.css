@@ -1662,15 +1662,42 @@ input {
   font-weight: 700;
 }
 
-.floating-error {
+.error-notice {
+  display: grid;
+  gap: 0.2rem;
+  width: min(100%, 22rem);
+  margin: 0.5rem auto 0;
+  padding: 0.55rem 0.75rem;
+  text-align: center;
+  font: inherit;
+  color: var(--danger);
+  background: var(--cream);
+  border: 3px solid var(--danger);
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+}
+
+.error-notice__text {
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.error-notice__hint {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+.error-notice--floating {
   position: fixed;
   top: 1rem;
   left: 50%;
+  z-index: 80;
+  margin: 0;
   transform: translateX(-50%);
-  background: var(--cream);
-  border: 3px solid var(--danger);
-  padding: 0.5rem 1rem;
-  box-shadow: 3px 3px 0 var(--ink);
+  width: min(92vw, 22rem);
+  animation: fade-in 0.2s steps(2, end) both;
+  pointer-events: auto;
 }
 
 .flash-summon .board-side.is-you .lanes {

@@ -72,9 +72,45 @@ export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
   const prevStateRef = useRef<GameState | null>(null)
   const cancelledRef = useRef(false)
   const sessionRef = useRef({ hasRoom: false })
+  const errorTimerRef = useRef<number | undefined>(undefined)
+
+  const clearError = useCallback(() => {
+    if (errorTimerRef.current != null) {
+      window.clearTimeout(errorTimerRef.current)
+      errorTimerRef.current = undefined
+    }
+    setError(null)
+  }, [])
+
+  /** sticky=false なら数秒後に自動で消える。タップでも閉じられる */
+  const showError = useCallback(
+    (message: string, opts?: { sticky?: boolean; ms?: number }) => {
+      if (errorTimerRef.current != null) {
+        window.clearTimeout(errorTimerRef.current)
+        errorTimerRef.current = undefined
+      }
+      setError(message)
+      if (!opts?.sticky) {
+        const ms = opts?.ms ?? 2200
+        errorTimerRef.current = window.setTimeout(() => {
+          setError(null)
+          errorTimerRef.current = undefined
+        }, ms)
+      }
+    },
+    [],
+  )
 
   const send = useCallback((payload: object) => {
     wsRef.current?.send(JSON.stringify(payload))
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (errorTimerRef.current != null) {
+        window.clearTimeout(errorTimerRef.current)
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -93,7 +129,7 @@ export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
         }
         setWaking(false)
         setConnected(true)
-        setError(null)
+        clearError()
         setStatus('接続しました')
         if (mode === 'create') {
           send({ type: 'create' })
@@ -103,11 +139,13 @@ export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
         const msg = JSON.parse(ev.data as string) as NetMsg
         if (msg.type === 'room_created') {
           sessionRef.current.hasRoom = true
+          clearError()
           setRoomCode(msg.code)
           setPlayerId(msg.playerId)
           setStatus('相手の入室待ち…')
         } else if (msg.type === 'joined') {
           sessionRef.current.hasRoom = true
+          clearError()
           setRoomCode(msg.code)
           setPlayerId(msg.playerId)
           setStatus('入室しました')
@@ -115,13 +153,17 @@ export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
           setStatus('相手の入室待ち…')
         } else if (msg.type === 'state') {
           sessionRef.current.hasRoom = true
+          clearError()
           setState(msg.state)
           setStatus('対戦中')
           setSelect({ kind: 'none' })
         } else if (msg.type === 'error') {
-          setError(msg.message)
+          // 番違い・非合法はレースで出やすいので短く出して消す
+          const soft =
+            msg.message.includes('番では') || msg.message.includes('できません')
+          showError(msg.message, soft ? { ms: 1800 } : undefined)
         } else if (msg.type === 'opponent_left') {
-          setError('相手が退出しました')
+          showError('相手が退出しました', { sticky: true })
           setStatus('終了')
         }
       }
@@ -133,7 +175,9 @@ export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
         setConnected(false)
         if (sessionRef.current.hasRoom) {
           setStatus('切断')
-          setError('接続が切れました。タイトルからやり直してください')
+          showError('接続が切れました。タイトルからやり直してください', {
+            sticky: true,
+          })
           setWaking(false)
           setFatalDisconnect(true)
           return
@@ -173,7 +217,7 @@ export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
       wsRef.current?.close()
       wsRef.current = null
     }
-  }, [mode, send])
+  }, [mode, send, clearError, showError])
 
   useEffect(() => {
     if (!state) return
@@ -183,13 +227,16 @@ export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
     prevStateRef.current = state
   }, [state, playerId])
 
+  const liveRef = useRef({ state, playerId })
+  liveRef.current = { state, playerId }
+
   function join() {
     const code = codeInput.trim().toUpperCase()
     if (code.length < 4) {
-      setError('部屋コードを入力してください')
+      showError('部屋コードを入力してください')
       return
     }
-    setError(null)
+    clearError()
     send({ type: 'join', code })
   }
 
@@ -200,9 +247,10 @@ export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
   }
 
   function dispatch(action: Action) {
-    if (!state || playerId === null) return
-    if (state.activePlayer !== playerId) return
-    if (!isLegal(state, action)) return
+    const { state: s, playerId: me } = liveRef.current
+    if (!s || me === null) return
+    if (s.activePlayer !== me) return
+    if (!isLegal(s, action)) return
     if (action.type === 'REST') flashWalk(action.instanceId)
     else if (action.type === 'CHALLENGE') flashWalk(action.attackerInstanceId)
     send({ type: 'action', action })
@@ -214,9 +262,11 @@ export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
     if (state.winner !== null) return
     if (!onlyEndTurnLeft(state)) return
     const t = window.setTimeout(() => {
-      if (!state || playerId === null) return
-      if (!onlyEndTurnLeft(state)) return
-      if (state.activePlayer !== playerId) return
+      const { state: s, playerId: me } = liveRef.current
+      if (!s || me === null) return
+      if (s.winner !== null) return
+      if (s.activePlayer !== me) return
+      if (!onlyEndTurnLeft(s)) return
       send({ type: 'action', action: { type: 'END_TURN' } })
     }, 700)
     return () => window.clearTimeout(t)
@@ -236,7 +286,9 @@ export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
       <div className="lobby">
         <h1>オンライン対戦</h1>
         <p className="lobby-status">{status}</p>
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <ErrorNotice message={error} onDismiss={clearError} />
+        )}
         <button type="button" className="btn btn--ghost" onClick={onExit}>
           戻る
         </button>
@@ -252,7 +304,10 @@ export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
         <input
           className="code-input"
           value={codeInput}
-          onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+          onChange={(e) => {
+            clearError()
+            setCodeInput(e.target.value.toUpperCase())
+          }}
           placeholder="部屋コード"
           maxLength={6}
         />
@@ -262,7 +317,9 @@ export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
         <button type="button" className="btn btn--ghost" onClick={onExit}>
           戻る
         </button>
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <ErrorNotice message={error} onDismiss={clearError} />
+        )}
       </div>
     )
   }
@@ -279,7 +336,9 @@ export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
             <p>友だちにこのコードを伝えてください</p>
           </div>
         )}
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <ErrorNotice message={error} onDismiss={clearError} />
+        )}
         <button type="button" className="btn btn--ghost" onClick={onExit}>
           戻る
         </button>
@@ -527,7 +586,35 @@ export function OnlineGame({ mode, onExit, onHelp, onCatalog }: Props) {
         </ul>
       </aside>
 
-      {error && <p className="error floating-error">{error}</p>}
+      {error && (
+        <ErrorNotice
+          message={error}
+          onDismiss={clearError}
+          floating
+        />
+      )}
     </div>
+  )
+}
+
+function ErrorNotice({
+  message,
+  onDismiss,
+  floating = false,
+}: {
+  message: string
+  onDismiss: () => void
+  floating?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      className={`error-notice${floating ? ' error-notice--floating' : ''}`}
+      onClick={onDismiss}
+      aria-live="polite"
+    >
+      <span className="error-notice__text">{message}</span>
+      <span className="error-notice__hint">タップで閉じる</span>
+    </button>
   )
 }
